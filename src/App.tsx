@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 async function openMediaDevices(constraints: MediaStreamConstraints) {
   return await navigator.mediaDevices.getUserMedia(constraints);
@@ -11,6 +11,7 @@ async function getConnectedDevices(type: MediaDeviceKind) {
 }
 
 function App() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [cameras, setCameras] = useState<{ label: string; value: string }[]>(
     []
   );
@@ -26,7 +27,7 @@ function App() {
   }
 
   // devicechange event handler
-  async function handleChangeCamera(event: Event) {
+  async function handleChangeCamera() {
     const newCameraList = await getConnectedDevices("videoinput");
     updateCameraList(newCameraList);
   }
@@ -36,6 +37,9 @@ function App() {
       try {
         const stream = await openMediaDevices({ video: true, audio: true });
         console.log("Got MediaStream:", stream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
       } catch (error) {
         console.error("Error accessing media devices.", error);
       }
@@ -43,15 +47,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      // Get the initial set of cameras connected
-      const videoCameras = await getConnectedDevices("videoinput");
-      console.log("Cameras found:", videoCameras);
-      updateCameraList(videoCameras);
-    })();
-  }, []);
+    handleChangeCamera();
 
-  useEffect(() => {
     // Listen for changes to media devices and update the list accordingly
     navigator.mediaDevices.addEventListener("devicechange", handleChangeCamera);
 
@@ -67,6 +64,7 @@ function App() {
   return (
     <div>
       <h1>Web RTC Test</h1>
+      <video ref={videoRef} autoPlay playsInline controls={false} />
       <ul>
         {cameras.map((camera) => (
           <li key={camera.value}>{camera.label}</li>
