@@ -1,24 +1,77 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { useEffect, useState } from "react";
+
+async function openMediaDevices(constraints: MediaStreamConstraints) {
+  return await navigator.mediaDevices.getUserMedia(constraints);
+}
+
+// Fetch an array of devices of a certain type
+async function getConnectedDevices(type: MediaDeviceKind) {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  return devices.filter((device) => device.kind === type);
+}
 
 function App() {
+  const [cameras, setCameras] = useState<{ label: string; value: string }[]>(
+    []
+  );
+
+  // Updates the select element with the provided set of cameras
+  function updateCameraList(cameras: MediaDeviceInfo[]) {
+    setCameras(
+      cameras.map((camera) => ({
+        label: camera.label,
+        value: camera.deviceId,
+      }))
+    );
+  }
+
+  // devicechange event handler
+  async function handleChangeCamera(event: Event) {
+    const newCameraList = await getConnectedDevices("videoinput");
+    updateCameraList(newCameraList);
+  }
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const stream = await openMediaDevices({ video: true, audio: true });
+        console.log("Got MediaStream:", stream);
+      } catch (error) {
+        console.error("Error accessing media devices.", error);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      // Get the initial set of cameras connected
+      const videoCameras = await getConnectedDevices("videoinput");
+      console.log("Cameras found:", videoCameras);
+      updateCameraList(videoCameras);
+    })();
+  }, []);
+
+  useEffect(() => {
+    // Listen for changes to media devices and update the list accordingly
+    navigator.mediaDevices.addEventListener("devicechange", handleChangeCamera);
+
+    return () => {
+      navigator.mediaDevices.removeEventListener(
+        "devicechange",
+        handleChangeCamera
+      );
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <h1>Web RTC Test</h1>
+      <ul>
+        {cameras.map((camera) => (
+          <li key={camera.value}>{camera.label}</li>
+        ))}
+      </ul>
     </div>
   );
 }
