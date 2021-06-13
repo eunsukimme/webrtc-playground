@@ -35,8 +35,20 @@ function App() {
   useEffect(() => {
     (async () => {
       try {
-        const stream = await openMediaDevices({ video: true, audio: true });
+        const stream = await openMediaDevices({
+          video: { width: 640, height: 480 },
+          audio: true,
+        });
         console.log("Got MediaStream:", stream);
+        console.log("MediaStream.getTracks()", stream.getTracks());
+        console.log(
+          "Audio MediaStreamTrack.getSetting()",
+          stream.getAudioTracks()[0].getSettings()
+        );
+        console.log(
+          "Video MediaStreamTrack.getSetting()",
+          stream.getVideoTracks()[0].getSettings()
+        );
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
@@ -59,6 +71,22 @@ function App() {
       );
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    // Set up an asynchronous communication channel that will be
+    // used during the peer connection setup
+    const signalingChannel = new WebSocket("ws://localhost:4000");
+
+    // Connection opened
+    signalingChannel.addEventListener("open", function (event) {
+      console.log(event);
+    });
+
+    // Listen for messages
+    signalingChannel.addEventListener("message", function (event) {
+      console.log("Message from server ", event.data);
+    });
   }, []);
 
   return (
